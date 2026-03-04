@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对象关系管理 - 桐乡水务</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f0f23; --bg-secondary: #1a1a3e; --bg-card: rgba(255,255,255,0.03);
+            --bg-nav: rgba(255,255,255,0.05); --border-color: rgba(255,255,255,0.08);
+            --text-primary: #fff; --text-secondary: #888; --text-muted: #666;
+            --accent-blue: #00d4ff; --accent-green: #00ff88; --accent-yellow: #ffaa00;
+            --accent-red: #ff4757; --accent-purple: #8a2be2; --accent-orange: #ff6b35;
+        }
+        [data-theme="light"] {
+            --bg-primary: #f5f7fa; --bg-secondary: #ffffff; --bg-card: rgba(255,255,255,0.9);
+            --bg-nav: rgba(255,255,255,0.95); --border-color: rgba(0,0,0,0.08);
+            --text-primary: #1a1a2e; --text-secondary: #666; --text-muted: #999;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+            min-height: 100vh; color: var(--text-primary); transition: all 0.3s ease;
+        }
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: var(--bg-nav); backdrop-filter: blur(10px); padding: 15px 40px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .nav-brand { font-size: 20px; font-weight: 700; color: var(--accent-blue); }
+        .nav-links { display: flex; gap: 15px; align-items: center; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; font-size: 14px; }
+        .nav-links a:hover, .nav-links a.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
+        .theme-toggle {
+            padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); cursor: pointer;
+            font-size: 18px; transition: all 0.3s;
+        }
+        .theme-toggle:hover { background: rgba(0,212,255,0.15); }
+        .container { padding: 30px 40px; padding-top: 90px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .header h1 { font-size: 24px; font-weight: 600; color: var(--text-primary); }
+        .header p { color: var(--text-secondary); font-size: 14px; }
+        .btn {
+            padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+            font-size: 14px; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--accent-blue), var(--accent-green)); color: #0f0f23; font-weight: 600; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,212,255,0.4); }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: rgba(0,212,255,0.15); }
+        
+        /* 筛选栏 */
+        .filter-bar {
+            display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;
+            background: var(--bg-card); padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border-color);
+        }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-group label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+        .filter-select {
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); font-size: 13px; min-width: 150px;
+        }
+        .filter-input {
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); font-size: 13px; width: 200px;
+        }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            color: var(--text-secondary); transition: all 0.3s; font-size: 14px;
+        }
+        .tab:hover { background: rgba(255,255,255,0.05); }
+        .tab.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); border-color: rgba(0,212,255,0.3); }
+        
+        /* 关系卡片组 */
+        .relation-group {
+            background: var(--bg-card); border-radius: 14px; border: 1px solid var(--border-color);
+            margin-bottom: 20px; overflow: hidden;
+        }
+        .relation-group-header {
+            padding: 15px 20px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .relation-group-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .relation-group-title .icon { font-size: 20px; }
+        .relation-type-badge {
+            padding: 4px 10px; border-radius: 20px; font-size: 11px;
+            background: rgba(0,212,255,0.15); color: var(--accent-blue);
+        }
+        .relation-type-badge.table { background: rgba(0,255,136,0.15); color: var(--accent-green); }
+        
+        /* 表格 */
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .table th { font-size: 12px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; background: rgba(255,255,255,0.02); }
+        .table td { font-size: 13px; }
+        .table tr:hover { background: rgba(0,212,255,0.03); }
+        
+        .object-cell { display: flex; align-items: center; gap: 10px; }
+        .object-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .object-icon.zone { background: rgba(0,212,255,0.15); }
+        .object-icon.place { background: rgba(0,255,136,0.15); }
+        .object-icon.device { background: rgba(255,170,0,0.15); }
+        .object-icon.org { background: rgba(138,43,226,0.15); }
+        .object-info { display: flex; flex-direction: column; }
+        .object-name { font-weight: 500; }
+        .object-code { font-size: 11px; color: var(--text-muted); }
+        
+        .relation-arrow { color: var(--accent-blue); font-size: 18px; }
+        .relation-arrow.in { color: var(--accent-green); }
+        .relation-arrow.out { color: var(--accent-yellow); }
+        .relation-arrow.belong { color: var(--accent-purple); }
+        
+        .action-btns { display: flex; gap: 8px; }
+        .action-btn {
+            padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer;
+            font-size: 12px; transition: all 0.3s;
+        }
+        .action-btn.edit { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
+        .action-btn.delete { background: rgba(255,71,87,0.15); color: var(--accent-red); }
+        .action-btn:hover { transform: translateY(-1px); }
+        
+        /* 弹窗 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-secondary); border-radius: 16px;
+            border: 1px solid var(--border-color); width: 600px; max-width: 90%;
+            max-height: 90vh; overflow: auto;
+        }
+        .modal-header {
+            padding: 20px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-title { font-size: 18px; font-weight: 600; }
+        .modal-close {
+            width: 32px; height: 32px; border-radius: 8px; border: none;
+            background: var(--bg-card); color: var(--text-primary); cursor: pointer;
+            font-size: 18px;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 15px 20px; border-top: 1px solid var(--border-color);
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .form-select, .form-input {
+            width: 100%; padding: 10px 14px; border-radius: 8px;
+            border: 1px solid var(--border-color); background: var(--bg-card);
+            color: var(--text-primary); font-size: 14px;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .object-selector {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 15px; margin-bottom: 15px;
+        }
+        .object-selector-title { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+        .relation-connector {
+            text-align: center; padding: 10px; color: var(--accent-blue); font-size: 24px;
+        }
+        
+        /* 统计卡片 */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card {
+            background: var(--bg-card); border-radius: 12px; padding: 20px;
+            border: 1px solid var(--border-color); text-align: center;
+        }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--accent-blue); }
+        .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 5px; }
+        
+        .footer { text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border-color); margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <div class="nav-brand">💧 桐乡水务</div>
+        <div class="nav-links">
+            <a href="index.html">总览</a>
+            <a href="realtime.html">实时监测</a>
+            <a href="alarm.html">实时报警</a>
+            <a href="data-management.html">资产管理</a>
+            <a href="relation.html" class="active">关系管理</a>
+            <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🔗 对象关系管理</h1>
+                <p>构建和管理对象之间的关联关系</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal()">+ 新建关系</button>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value">156</div>
+                <div class="stat-label">关系总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">关系类型</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">45</div>
+                <div class="stat-label">字段关联</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">111</div>
+                <div class="stat-label">表关联</div>
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>关系类型：</label>
+                <select class="filter-select" id="filterRelationType">
+                    <option value="">全部类型</option>
+                    <option value="belong">归属关系</option>
+                    <option value="inflow">进水关系</option>
+                    <option value="outflow">出水关系</option>
+                    <option value="upstream">上游关系</option>
+                    <option value="downstream">下游关系</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>源对象：</label>
+                <select class="filter-select" id="filterSourceType">
+                    <option value="">全部类型</option>
+                    <option value="zone">分区</option>
+                    <option value="place">场所</option>
+                    <option value="device">设备</option>
+                    <option value="org">组织</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>搜索：</label>
+                <input type="text" class="filter-input" id="filterKeyword" placeholder="搜索对象名称...">
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('all')">全部关系</div>
+            <div class="tab" onclick="showTab('belong')">归属关系</div>
+            <div class="tab" onclick="showTab('flow')">进出水关系</div>
+            <div class="tab" onclick="showTab('updown')">上下游关系</div>
+        </div>
+
+        <!-- 关系列表 -->
+        <div id="relationList"></div>
+    </div>
+
+    <!-- 新建关系弹窗 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">新建对象关系</div>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">关系类型</label>
+                    <select class="form-select" id="relationType" onchange="updateRelationDirection()">
+                        <option value="ZONE_PLACE">分区 → 场所（归属）</option>
+                        <option value="PLACE_DEVICE">场所 → 设备（归属）</option>
+                        <option value="DEVICE_INFLOW">设备 → 设备（进水）</option>
+                        <option value="DEVICE_OUTFLOW">设备 → 设备（出水）</option>
+                        <option value="PLACE_UPSTREAM">场所 → 场所（上游）</option>
+                        <option value="PLACE_DOWNSTREAM">场所 → 场所（下游）</option>
+                        <option value="ORG_PLACE">组织 → 场所（归属）</option>
+                    </select>
+                </div>
+
+                <div class="object-selector">
+                    <div class="object-selector-title">源对象</div>
+                    <div class="form-row">
+                        <select class="form-select" id="sourceType">
+                            <option value="zone">🗺️ 分区</option>
+                            <option value="place">🏭 场所</option>
+                            <option value="device">⚙️ 设备</option>
+                            <option value="org">🏢 组织</option>
+                        </select>
+                        <select class="form-select" id="sourceObject">
+                            <option>梧桐分区</option>
+                            <option>濮院分区</option>
+                            <option>凤鸣分区</option>
+                            <option>石门分区</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="relation-connector" id="relationDirection">─── 归属 ───▶</div>
+
+                <div class="object-selector">
+                    <div class="object-selector-title">目标对象</div>
+                    <div class="form-row">
+                        <select class="form-select" id="targetType">
+                            <option value="place">🏭 场所</option>
+                            <option value="device">⚙️ 设备</option>
+                        </select>
+                        <select class="form-select" id="targetObject">
+                            <option>流量监测点_梧桐A区</option>
+                            <option>流量监测点_梧桐B区</option>
+                            <option>压力监测点_梧桐C区</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">关系属性</label>
+                    <div class="form-row">
+                        <input type="text" class="form-input" placeholder="流量比例 (%)">
+                        <input type="datetime-local" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">备注</label>
+                    <input type="text" class="form-input" placeholder="输入备注信息...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveRelation()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        桐乡市水务集团 | 对象关系管理系统
+    </div>
+
+    <script>
+        // 模拟数据
+        const relations = {
+            belong: [
+                { id: 1, sourceType: 'zone', sourceName: '梧桐分区', sourceCode: 'WT', targetType: 'place', targetName: '流量监测点_梧桐A区', targetCode: 'PL-001', relation: '归属' },
+                { id: 2, sourceType: 'zone', sourceName: '濮院分区', sourceCode: 'PY', targetType: 'place', targetName: '流量监测点_濮院A区', targetCode: 'PL-002', relation: '归属' },
+                { id: 3, sourceType: 'place', sourceName: '果园桥取水口', sourceCode: 'PL-003', targetType: 'org', targetName: '供水公司', targetCode: 'ORG-001', relation: '归属' },
+                { id: 4, sourceType: 'device', sourceName: '流量仪表_26020001', sourceCode: 'DEV-001', targetType: 'place', targetName: '梧桐监测点A', targetCode: 'PL-004', relation: '安装于' },
+            ],
+            flow: [
+                { id: 5, sourceType: 'device', sourceName: '流量仪表_26020001', sourceCode: 'DEV-001', targetType: 'device', targetName: '流量仪表_26020002', targetCode: 'DEV-002', relation: '进水', ratio: '100%' },
+                { id: 6, sourceType: 'device', sourceName: '流量仪表_26020002', sourceCode: 'DEV-002', targetType: 'device', targetName: '流量仪表_26020003', targetCode: 'DEV-003', relation: '出水', ratio: '85%' },
+                { id: 7, sourceType: 'device', sourceName: '流量仪表_26020003', sourceCode: 'DEV-003', targetType: 'device', targetName: '流量仪表_26020004', targetCode: 'DEV-004', relation: '进水', ratio: '100%' },
+            ],
+            updown: [
+                { id: 8, sourceType: 'place', sourceName: '果园桥取水口', sourceCode: 'PL-003', targetType: 'place', targetName: '果园桥水厂', targetCode: 'PL-005', relation: '上游' },
+                { id: 9, sourceType: 'place', sourceName: '运河取水口', sourceCode: 'PL-006', targetType: 'place', targetName: '运河水厂', targetCode: 'PL-007', relation: '上游' },
+                { id: 10, sourceType: 'place', sourceName: '果园桥水厂', sourceCode: 'PL-005', targetType: 'place', targetName: '梧桐分区管网', targetCode: 'PL-008', relation: '下游' },
+            ]
+        };
+
+        const typeIcons = { zone: '🗺️', place: '🏭', device: '⚙️', org: '🏢' };
+
+        function renderRelations(filter = 'all') {
+            const list = document.getElementById('relationList');
+            let data = [];
+            if (filter === 'all') data = [...relations.belong, ...relations.flow, ...relations.updown];
+            else if (filter === 'belong') data = relations.belong;
+            else if (filter === 'flow') data = relations.flow;
+            else if (filter === 'updown') data = relations.updown;
+
+            let html = '';
+            const groups = {};
+            data.forEach(r => {
+                const key = r.relation;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(r);
+            });
+
+            Object.keys(groups).forEach(relationType => {
+                const items = groups[relationType];
+                const isTable = ['进水', '出水', '上游', '下游'].includes(relationType);
+                html += `
+                <div class="relation-group">
+                    <div class="relation-group-header">
+                        <div class="relation-group-title">
+                            <span class="icon">🔗</span>
+                            ${relationType}关系
+                            <span class="relation-type-badge ${isTable ? 'table' : ''}">${isTable ? '表关联' : '字段关联'}</span>
+                        </div>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>源对象</th>
+                                <th>关系</th>
+                                <th>目标对象</th>
+                                ${isTable ? '<th>比例</th>' : ''}
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map(r => `
+                            <tr>
+                                <td>
+                                    <div class="object-cell">
+                                        <div class="object-icon ${r.sourceType}">${typeIcons[r.sourceType]}</div>
+                                        <div class="object-info">
+                                            <div class="object-name">${r.sourceName}</div>
+                                            <div class="object-code">${r.sourceCode}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="relation-arrow ${r.relation === '进水' ? 'in' : r.relation === '出水' ? 'out' : 'belong'}">─── ${r.relation} ───▶</span></td>
+                                <td>
+                                    <div class="object-cell">
+                                        <div class="object-icon ${r.targetType}">${typeIcons[r.targetType]}</div>
+                                        <div class="object-info">
+                                            <div class="object-name">${r.targetName}</div>
+                                            <div class="object-code">${r.targetCode}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                ${isTable ? `<td>${r.ratio || '-'}</td>` : ''}
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="action-btn edit">编辑</button>
+                                        <button class="action-btn delete">删除</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            });
+            list.innerHTML = html;
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderRelations(tab);
+        }
+
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function updateRelationDirection() {
+            const type = document.getElementById('relationType').value;
+            const direction = document.getElementById('relationDirection');
+            const directions = {
+                'ZONE_PLACE': '─── 归属 ───▶',
+                'PLACE_DEVICE': '─── 安装于 ───▶',
+                'DEVICE_INFLOW': '─── 进水 ───▶',
+                'DEVICE_OUTFLOW': '─── 出水 ───▶',
+                'PLACE_UPSTREAM': '─── 上游 ───▶',
+                'PLACE_DOWNSTREAM': '─── 下游 ───▶',
+                'ORG_PLACE': '─── 管辖 ───▶'
+            };
+            direction.textContent = directions[type] || '─── 关联 ───▶';
+        }
+
+        function saveRelation() {
+            alert('关系保存成功！');
+            closeModal();
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            document.querySelector('.theme-toggle').textContent = newTheme === 'dark' ? '🌙' : '☀️';
+            localStorage.setItem('theme', newTheme);
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        renderRelations();
+    </script>
+</body>
+</html>
