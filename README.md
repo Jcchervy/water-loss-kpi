@@ -1,6 +1,6 @@
 # 💧 桐乡水务 KPI Dashboard
 
-桐乡市水务集团监控面板，包含漏损控制和基础设施管理两大模块。
+桐乡市水务集团监控面板，包含漏损控制、基础设施、总览和数据管理四大模块。
 
 ## 📊 Dashboard 页面
 
@@ -21,100 +21,87 @@
 - 分区监测覆盖情况
 - 问题预警与建议
 
+### 3. 基础设施总览 ⭐ NEW
+**访问**: https://Jcchervy.github.io/water-loss-kpi/overview.html
+
+- **产品分析**: 7 种产品类型分布
+- **分区分析**: 11 个分区监测点分布
+- **场所分析**: 水源地、泵站、水厂、监测点统计
+- **设备分析**: 设备类型分布、在线率统计
+- **问题与建议**: 智能预警和整改建议
+
+### 4. 数据管理 ⭐ NEW
+**访问**: https://Jcchervy.github.io/water-loss-kpi/data-management.html
+
+- **产品管理**: 7 种产品 CRUD 操作
+- **分区管理**: 11 个分区 CRUD 操作
+- **场所管理**: 2,371 个场所 CRUD 操作（水源地、泵站、水厂、监测点）
+- **设备管理**: 2,686 台设备 CRUD 操作（流量、压力、水质、水泵）
+
 ## 🏭 覆盖范围
 
 - **水源地**: 千岛湖源水、西部湿地
 - **制水厂**: 果园桥水厂、运河水厂、同福水厂
 - **分区**: 梧桐、濮院、凤鸣、石门、乌镇等 11 个分区
 - **监测点**: 2,646 个 (流量 2,330 + 压力 308 + 水质 8)
+- **设备总数**: 2,686 台
 
 ## 📁 文件结构
 
 ```
 water-loss-kpi-dashboard/
-├── index.html          # 漏损控制 KPI Dashboard
-├── infrastructure.html # 基础设施 KPI Dashboard
-├── DEPLOY.md           # 部署指南
-└── README.md           # 本文件
+├── index.html              # 漏损控制 KPI Dashboard
+├── infrastructure.html     # 基础设施 KPI Dashboard
+├── overview.html           # 基础设施总览 (NEW)
+├── data-management.html    # 数据管理 (NEW)
+├── 分区数据.csv            # 分区数据导出
+├── DEPLOY.md               # 部署指南
+└── README.md               # 本文件
 ```
 
 ## 🚀 部署步骤
 
-### 方式一：GitHub Pages（推荐）
+### GitHub Pages
 
-1. **创建仓库**
-   - 访问 https://github.com/new
-   - 仓库名：`water-loss-kpi`
-   - 选择 **Public**（公开）
-   - **不要**勾选 "Add a README file"
-
-2. **推送代码**
+1. **推送代码**
    ```bash
    cd /root/.openclaw/workspace/water-loss-kpi-dashboard
-   git remote add origin https://github.com/Jcchervy/water-loss-kpi.git
-   git branch -M main
-   git push -u origin main --force
+   git add .
+   git commit -m "Add overview and data management pages"
+   git push origin main
    ```
 
-3. **开启 Pages**
+2. **开启 Pages**
    - 进入仓库 → **Settings** → **Pages**
    - Source 选择 **main** 分支
    - 点击 **Save**
 
-4. **访问网站**
+3. **访问网站**
    - 等待 1-2 分钟
-   - 漏损控制：https://Jcchervy.github.io/water-loss-kpi/
+   - 主页：https://Jcchervy.github.io/water-loss-kpi/
    - 基础设施：https://Jcchervy.github.io/water-loss-kpi/infrastructure.html
-
-### 方式二：Vercel
-
-```bash
-npm i -g vercel
-cd /root/.openclaw/workspace/water-loss-kpi-dashboard
-vercel --prod
-```
-
-### 方式三：本地测试
-
-```bash
-cd /root/.openclaw/workspace/water-loss-kpi-dashboard
-npx http-server -p 8080
-# 访问 http://localhost:8080
-# 访问 http://localhost:8080/infrastructure.html
-```
+   - 总览：https://Jcchervy.github.io/water-loss-kpi/overview.html
+   - 数据管理：https://Jcchervy.github.io/water-loss-kpi/data-management.html
 
 ## 🔧 自定义数据
 
-编辑 `index.html` 或 `infrastructure.html` 中的以下内容：
+编辑对应 HTML 文件中的 JavaScript 数据：
 
-### 修改 KPI 数值
-```html
-<div class="card-value green">11.8<span class="card-unit">%</span></div>
-```
-
-### 修改分区数据
-```html
-<div class="dma-item">
-    <span class="dma-name">梧桐分区 (WT)</span>
-    <span class="dma-value good">9.2%</span>
-</div>
-```
-
-### 修改图表数据
 ```javascript
-// 在 <script> 标签内
+// 修改图表数据
 datasets: [{
-    data: [17.2, 16.5, 15.8, ...]  // 趋势数据
+    data: [420, 380, 290, ...]  // 分区监测点数据
 }]
+
+// 修改表格数据
+<tbody>
+    <tr><td>1</td><td>数据...</td></tr>
+</tbody>
 ```
 
 ## 📱 移动端适配
 
-页面已支持响应式设计，可在手机、平板、桌面端正常访问。
-
-## 📄 许可证
-
-MIT License
+所有页面已支持响应式设计，可在手机、平板、桌面端正常访问。
 
 ---
 
