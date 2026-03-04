@@ -103,6 +103,7 @@
         }
         .page-btn.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); border-color: rgba(0,212,255,0.3); }
         .page-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .footer { text-align: center; padding: 25px; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border-color); margin-top: 40px; }
     </style>
 </head>
@@ -254,11 +255,63 @@
     </div>
 
     <script>
+        // 分页配置
+        const pageSize = 10;
+        const currentPage = { products: 1, zones: 1, places: 1, devices: 1 };
+        const totalItems = { products: 7, zones: 11, places: 2371, devices: 2686 };
+
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
             event.target.classList.add('active');
+        }
+
+        // 翻页功能
+        function goToPage(section, page) {
+            const totalPages = Math.ceil(totalItems[section] / pageSize);
+            if (page < 1 || page > totalPages) return;
+            currentPage[section] = page;
+            renderPagination(section);
+            // 这里可以添加实际的数据加载逻辑
+            console.log(`切换到 ${section} 第 ${page} 页`);
+        }
+
+        function renderPagination(section) {
+            const totalPages = Math.ceil(totalItems[section] / pageSize);
+            const current = currentPage[section];
+            const start = (current - 1) * pageSize + 1;
+            const end = Math.min(current * pageSize, totalItems[section]);
+            
+            // 更新分页信息
+            const infoEl = document.querySelector(`#${section} .pagination-info`);
+            if (infoEl) infoEl.textContent = `显示 ${start}-${end} 共 ${totalItems[section]} 条`;
+            
+            // 更新分页按钮
+            const btnsContainer = document.querySelector(`#${section} .pagination-btns`);
+            if (!btnsContainer) return;
+            
+            let html = '';
+            const maxVisible = 5;
+            let startPage = Math.max(1, current - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+            startPage = Math.max(1, endPage - maxVisible + 1);
+            
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="goToPage('${section}', 1)">1</button>`;
+                if (startPage > 2) html += `<span style="color:var(--text-muted)">...</span>`;
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === current ? 'active' : ''}" onclick="goToPage('${section}', ${i})">${i}</button>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span style="color:var(--text-muted)">...</span>`;
+                html += `<button class="page-btn" onclick="goToPage('${section}', ${totalPages})">${totalPages}</button>`;
+            }
+            
+            btnsContainer.innerHTML = html;
         }
 
         function toggleTheme() {
@@ -273,6 +326,11 @@
         const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        // 初始化分页
+        ['products', 'zones', 'places', 'devices'].forEach(section => {
+            renderPagination(section);
+        });
     </script>
 </body>
 </html>

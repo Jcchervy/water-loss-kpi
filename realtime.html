@@ -39,9 +39,14 @@
         }
         .theme-toggle:hover { background: rgba(0,212,255,0.15); }
         .container { padding: 30px 40px; }
-        .header { margin-bottom: 30px; }
+        .header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .header h1 { font-size: 28px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
         .header p { color: var(--text-secondary); }
+        .search-input {
+            padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); font-size: 14px; width: 280px;
+        }
+        .search-input::placeholder { color: var(--text-muted); }
         .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
         .tab {
             padding: 10px 20px; border-radius: 8px; cursor: pointer;
@@ -96,8 +101,11 @@
 
     <div class="container">
         <div class="header">
-            <h1>📊 实时监测</h1>
-            <p>设备实时数据监控 · 自动刷新</p>
+            <div>
+                <h1>📊 实时监测</h1>
+                <p>设备实时数据监控 · 自动刷新</p>
+            </div>
+            <input type="text" class="search-input" id="deviceSearch" placeholder="搜索设备名称、位置..." oninput="filterDevices()">
         </div>
 
         <div class="tabs">
@@ -168,12 +176,73 @@
             return { name: `水泵_${26024989 + index}`, location, status: status === 'running' ? 'online' : 'offline', current, voltage, frequency, power };
         }
 
+        let currentFlowData = [], currentPressureData = [], currentQualityData = [], currentPumpData = [];
+
         function renderFlowCards() {
             const grid = document.getElementById('flowGrid');
-            let html = '';
+            currentFlowData = [];
             for (let i = 0; i < 12; i++) {
-                const data = generateFlowData(i);
-                html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">瞬时流量</div><div class="metric-value">${data.instantFlow}<span class="metric-unit">m³/h</span></div></div><div class="metric"><div class="metric-label">累计流量</div><div class="metric-value">${data.totalFlow}<span class="metric-unit">m³</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+                currentFlowData.push(generateFlowData(i));
+            }
+            renderCards('flowGrid', currentFlowData, 'flow');
+        }
+
+        function renderPressureCards() {
+            const grid = document.getElementById('pressureGrid');
+            currentPressureData = [];
+            for (let i = 0; i < 12; i++) {
+                currentPressureData.push(generatePressureData(i));
+            }
+            renderCards('pressureGrid', currentPressureData, 'pressure');
+        }
+
+        function renderQualityCards() {
+            const grid = document.getElementById('qualityGrid');
+            currentQualityData = [];
+            for (let i = 0; i < 8; i++) {
+                currentQualityData.push(generateQualityData(i));
+            }
+            renderCards('qualityGrid', currentQualityData, 'quality');
+        }
+
+        function renderPumpCards() {
+            const grid = document.getElementById('pumpGrid');
+            currentPumpData = [];
+            for (let i = 0; i < 12; i++) {
+                currentPumpData.push(generatePumpData(i));
+            }
+            renderCards('pumpGrid', currentPumpData, 'pump');
+        }
+
+        function renderCards(gridId, data, type) {
+            const grid = document.getElementById(gridId);
+            const searchTerm = document.getElementById('deviceSearch').value.toLowerCase();
+            const filtered = data.filter(item => {
+                if (!searchTerm) return true;
+                return item.name.toLowerCase().includes(searchTerm) || 
+                       item.location.toLowerCase().includes(searchTerm) ||
+                       (item.zone && item.zone.toLowerCase().includes(searchTerm));
+            });
+            
+            let html = '';
+            if (filtered.length === 0) {
+                html = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">暂无匹配的设备</div>';
+            } else if (type === 'flow') {
+                filtered.forEach(data => {
+                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">瞬时流量</div><div class="metric-value">${data.instantFlow}<span class="metric-unit">m³/h</span></div></div><div class="metric"><div class="metric-label">累计流量</div><div class="metric-value">${data.totalFlow}<span class="metric-unit">m³</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+                });
+            } else if (type === 'pressure') {
+                filtered.forEach(data => {
+                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">压力</div><div class="metric-value ${data.pressure < 0.25 ? 'yellow' : 'green'}">${data.pressure}<span class="metric-unit">MPa</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+                });
+            } else if (type === 'quality') {
+                filtered.forEach(data => {
+                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">余氯</div><div class="metric-value green">${data.chlorine}<span class="metric-unit">mg/L</span></div></div><div class="metric"><div class="metric-label">浊度</div><div class="metric-value green">${data.turbidity}<span class="metric-unit">NTU</span></div></div><div class="metric"><div class="metric-label">pH</div><div class="metric-value">${data.ph}</div></div><div class="metric"><div class="metric-label">温度</div><div class="metric-value">${data.temp}<span class="metric-unit">°C</span></div></div><div class="card-footer"><span class="badge purple">${data.location}</span></div></div>`;
+                });
+            } else if (type === 'pump') {
+                filtered.forEach(data => {
+                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">状态</div><div class="metric-value ${data.status === 'online' ? 'green' : 'red'}">${data.status === 'online' ? '运行中' : '停止'}</div></div><div class="metric"><div class="metric-label">电流</div><div class="metric-value">${data.current}<span class="metric-unit">A</span></div></div><div class="metric"><div class="metric-label">电压</div><div class="metric-value">${data.voltage}<span class="metric-unit">V</span></div></div><div class="metric"><div class="metric-label">频率</div><div class="metric-value">${data.frequency}<span class="metric-unit">Hz</span></div></div><div class="metric"><div class="metric-label">功率</div><div class="metric-value">${data.power}<span class="metric-unit">W</span></div></div><div class="card-footer"><span class="badge yellow">${data.location}</span></div></div>`;
+                });
             }
             grid.innerHTML = html;
         }
@@ -213,6 +282,14 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
             event.target.classList.add('active');
+        }
+
+        function filterDevices() {
+            const activeSection = document.querySelector('.section.active');
+            if (activeSection.id === 'flow') renderCards('flowGrid', currentFlowData, 'flow');
+            else if (activeSection.id === 'pressure') renderCards('pressureGrid', currentPressureData, 'pressure');
+            else if (activeSection.id === 'quality') renderCards('qualityGrid', currentQualityData, 'quality');
+            else if (activeSection.id === 'pump') renderCards('pumpGrid', currentPumpData, 'pump');
         }
 
         function updateTime() {

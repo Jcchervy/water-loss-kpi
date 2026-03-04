@@ -40,8 +40,14 @@
         .theme-toggle:hover { background: rgba(0,212,255,0.15); }
         .container { padding: 30px 40px; }
         .header { margin-bottom: 30px; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
         .header h1 { font-size: 28px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
         .header p { color: var(--text-secondary); }
+        .search-input {
+            padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); font-size: 14px; width: 280px;
+        }
+        .search-input::placeholder { color: var(--text-muted); }
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card {
             background: var(--bg-card); border-radius: 14px; padding: 20px;
@@ -102,8 +108,13 @@
 
     <div class="container">
         <div class="header">
-            <h1>🚨 实时报警</h1>
-            <p>设备异常告警 · 自动监测 · 及时响应</p>
+            <div class="header-content">
+                <div>
+                    <h1>🚨 实时报警</h1>
+                    <p>设备异常告警 · 自动监测 · 及时响应</p>
+                </div>
+                <input type="text" class="search-input" id="alarmSearch" placeholder="搜索告警内容、设备、位置..." oninput="filterAlarms()">
+            </div>
         </div>
 
         <div class="stats">
@@ -143,8 +154,22 @@
 
         function renderAlarms(filter = 'all') {
             const list = document.getElementById('alarmList');
-            const filtered = filter === 'all' ? alarms : alarms.filter(a => a.level === filter);
-            list.innerHTML = filtered.map(alarm => `
+            const searchTerm = document.getElementById('alarmSearch').value.toLowerCase();
+            let filtered = filter === 'all' ? alarms : alarms.filter(a => a.level === filter);
+            
+            // 应用搜索过滤
+            if (searchTerm) {
+                filtered = filtered.filter(a => 
+                    a.title.toLowerCase().includes(searchTerm) ||
+                    a.desc.toLowerCase().includes(searchTerm) ||
+                    a.location.toLowerCase().includes(searchTerm) ||
+                    a.device.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            list.innerHTML = filtered.length === 0 ? 
+                '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">暂无匹配的告警</div>' :
+                filtered.map(alarm => `
                 <div class="alarm-item ${alarm.level}">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                         <div class="alarm-icon" style="font-size: 24px;">${alarm.icon}</div>
@@ -167,6 +192,16 @@
             document.getElementById(sectionId).classList.add('active');
             event.target.classList.add('active');
             renderAlarms(sectionId);
+        }
+
+        function filterAlarms() {
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab) {
+                const sectionId = activeTab.textContent.includes('全部') ? 'all' :
+                                  activeTab.textContent.includes('严重') ? 'critical' :
+                                  activeTab.textContent.includes('主要') ? 'major' : 'minor';
+                renderAlarms(sectionId);
+            }
         }
 
         function toggleTheme() {
