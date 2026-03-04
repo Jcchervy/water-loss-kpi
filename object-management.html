@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对象管理 - 桐乡水务</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a3e;
+            --bg-card: rgba(255,255,255,0.03);
+            --bg-input: rgba(255,255,255,0.05);
+            --border-color: rgba(255,255,255,0.08);
+            --text-primary: #fff;
+            --text-secondary: #888;
+            --text-muted: #666;
+            --accent-blue: #00d4ff;
+            --accent-green: #00ff88;
+            --accent-yellow: #ffaa00;
+            --accent-red: #ff4757;
+            --accent-purple: #8a2be2;
+        }
+        [data-theme="light"] {
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --bg-card: rgba(255,255,255,0.9);
+            --bg-input: rgba(0,0,0,0.05);
+            --border-color: rgba(0,0,0,0.08);
+            --text-primary: #1a1a2e;
+            --text-secondary: #666;
+            --text-muted: #999;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+            min-height: 100vh; color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        .header {
+            background: var(--bg-card); backdrop-filter: blur(10px);
+            padding: 20px 40px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left h1 { font-size: 24px; font-weight: 600; color: var(--accent-blue); }
+        .header-left p { color: var(--text-secondary); margin-top: 5px; font-size: 13px; }
+        .header-right { display: flex; gap: 15px; align-items: center; }
+        .theme-toggle {
+            padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); cursor: pointer;
+            font-size: 18px; transition: all 0.3s;
+        }
+        .container { padding: 30px 40px; display: grid; grid-template-columns: 280px 1fr; gap: 30px; }
+        .sidebar {
+            background: var(--bg-card); border-radius: 14px; padding: 20px;
+            border: 1px solid var(--border-color); height: fit-content;
+        }
+        .sidebar-title { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .object-list { display: flex; flex-direction: column; gap: 8px; }
+        .object-item {
+            padding: 12px 15px; border-radius: 8px; cursor: pointer;
+            background: var(--bg-input); border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+        .object-item:hover { background: rgba(0,212,255,0.1); border-color: var(--accent-blue); }
+        .object-item.active { background: rgba(0,212,255,0.15); border-color: var(--accent-blue); }
+        .object-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+        .object-type { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+        .add-btn {
+            width: 100%; margin-top: 15px; padding: 12px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            border: none; color: #0f0f23; font-weight: 600; cursor: pointer;
+            transition: all 0.3s;
+        }
+        .add-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,212,255,0.4); }
+        .main-content {
+            background: var(--bg-card); border-radius: 14px; padding: 30px;
+            border: 1px solid var(--border-color);
+        }
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .tab {
+            padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            background: var(--bg-input); border: 1px solid var(--border-color);
+            color: var(--text-secondary); transition: all 0.3s; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .tab:hover { background: rgba(255,255,255,0.05); }
+        .tab.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); border-color: rgba(0,212,255,0.3); }
+        .section { display: none; }
+        .section.active { display: block; }
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group.full { grid-column: span 2; }
+        .form-label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .form-input {
+            width: 100%; padding: 12px; border-radius: 8px;
+            background: var(--bg-input); border: 1px solid var(--border-color);
+            color: var(--text-primary); font-size: 14px; transition: all 0.3s;
+        }
+        .form-input:focus { outline: none; border-color: var(--accent-blue); }
+        .form-select {
+            width: 100%; padding: 12px; border-radius: 8px;
+            background: var(--bg-input); border: 1px solid var(--border-color);
+            color: var(--text-primary); font-size: 14px; cursor: pointer;
+        }
+        .table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .table th, .table td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+        .table th { font-size: 12px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; background: var(--bg-input); }
+        .table tr:hover { background: rgba(0,212,255,0.05); }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge.blue { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
+        .badge.green { background: rgba(0,255,136,0.15); color: var(--accent-green); }
+        .badge.yellow { background: rgba(255,170,0,0.15); color: var(--accent-yellow); }
+        .badge.purple { background: rgba(138,43,226,0.15); color: var(--accent-purple); }
+        .btn {
+            padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+            font-size: 13px; font-weight: 600; transition: all 0.3s;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--accent-blue), var(--accent-green)); color: #0f0f23; }
+        .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-color); }
+        .btn-danger { background: rgba(255,71,87,0.15); color: var(--accent-red); border: 1px solid rgba(255,71,87,0.3); }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .relation-diagram {
+            background: var(--bg-input); border-radius: 12px; padding: 30px;
+            margin-top: 20px; min-height: 300px; display: flex; align-items: center; justify-content: center;
+        }
+        .relation-node {
+            background: var(--bg-card); border: 2px solid var(--accent-blue);
+            border-radius: 12px; padding: 20px; text-align: center;
+        }
+        .relation-line {
+            width: 100px; height: 2px; background: var(--accent-blue);
+            position: relative; display: inline-block; margin: 0 20px;
+        }
+        .relation-line::after {
+            content: attr(data-label); position: absolute; top: -20px; left: 50%;
+            transform: translateX(-50%); font-size: 11px; color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .footer { text-align: center; padding: 25px; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border-color); margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>🎯 对象管理</h1>
+            <p>对象配置中心 · 基础属性 · 远传属性 · 关系 · 指标</p>
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 左侧对象列表 -->
+        <div class="sidebar">
+            <div class="sidebar-title">对象列表</div>
+            <div class="object-list" id="objectList"></div>
+            <button class="add-btn" onclick="addNewObject()">+ 新增对象</button>
+        </div>
+
+        <!-- 右侧内容区 -->
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab active" onclick="showSection('basic')">📋 基础属性</div>
+                <div class="tab" onclick="showSection('remote')">📡 远传属性</div>
+                <div class="tab" onclick="showSection('relation')">🔗 关系</div>
+                <div class="tab" onclick="showSection('metric')">📊 指标</div>
+            </div>
+
+            <!-- 基础属性 -->
+            <div class="section active" id="basic">
+                <div class="section-title">基础属性配置</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">对象名称</label>
+                        <input type="text" class="form-input" placeholder="例如：流量仪表_26020001" id="objName">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">对象编码</label>
+                        <input type="text" class="form-input" placeholder="例如：020303_00004000" id="objCode">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">对象类型</label>
+                        <select class="form-select" id="objType">
+                            <option value="flow">流量仪表</option>
+                            <option value="pressure">压力仪表</option>
+                            <option value="quality">水质分析仪</option>
+                            <option value="pump">水泵</option>
+                            <option value="station">泵站</option>
+                            <option value="plant">水厂</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">所属分区</label>
+                        <select class="form-select" id="objZone">
+                            <option value="WT">梧桐</option>
+                            <option value="PY">濮院</option>
+                            <option value="FM">凤鸣</option>
+                            <option value="SM">石门</option>
+                            <option value="WZ">乌镇</option>
+                            <option value="CF">崇福</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">详细地址</label>
+                        <input type="text" class="form-input" placeholder="浙江省嘉兴市桐乡市..." id="objAddress">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">安装日期</label>
+                        <input type="date" class="form-input" id="objInstallDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select class="form-select" id="objStatus">
+                            <option value="active">启用</option>
+                            <option value="inactive">停用</option>
+                            <option value="maintenance">维护中</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveBasic()">💾 保存</button>
+                    <button class="btn btn-secondary" onclick="resetForm()">↺ 重置</button>
+                </div>
+            </div>
+
+            <!-- 远传属性 -->
+            <div class="section" id="remote">
+                <div class="section-title">远传属性配置</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">通讯协议</label>
+                        <select class="form-select" id="remoteProtocol">
+                            <option value="modbus">Modbus RTU</option>
+                            <option value="mqtt">MQTT</option>
+                            <option value="http">HTTP/HTTPS</option>
+                            <option value="tcp">TCP</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">采集间隔 (分钟)</label>
+                        <input type="number" class="form-input" value="5" id="remoteInterval">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IP 地址</label>
+                        <input type="text" class="form-input" placeholder="192.168.1.100" id="remoteIp">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">端口</label>
+                        <input type="number" class="form-input" value="502" id="remotePort">
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">监测指标</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                            <label><input type="checkbox" checked> 瞬时流量</label>
+                            <label><input type="checkbox" checked> 累计流量</label>
+                            <label><input type="checkbox"> 压力</label>
+                            <label><input type="checkbox"> 温度</label>
+                            <label><input type="checkbox"> pH 值</label>
+                            <label><input type="checkbox"> 浊度</label>
+                            <label><input type="checkbox"> 余氯</label>
+                            <label><input type="checkbox"> 电流</label>
+                            <label><input type="checkbox"> 电压</label>
+                            <label><input type="checkbox"> 频率</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveRemote()">💾 保存</button>
+                    <button class="btn btn-secondary" onclick="testConnection()">🔌 测试连接</button>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">通道配置</div>
+                <table class="table">
+                    <thead>
+                        <tr><th>通道号</th><th>指标名称</th><th>数据类型</th><th>寄存器地址</th><th>系数</th><th>单位</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="channelTable">
+                        <tr><td>1</td><td>正向累计</td><td>Float</td><td>40001</td><td>1.0</td><td>m³</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                        <tr><td>2</td><td>反向累计</td><td>Float</td><td>40003</td><td>1.0</td><td>m³</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                        <tr><td>7</td><td>正向瞬时</td><td>Float</td><td>40007</td><td>0.1</td><td>m³/h</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                        <tr><td>8</td><td>反向瞬时</td><td>Float</td><td>40009</td><td>0.1</td><td>m³/h</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                    </tbody>
+                </table>
+                <button class="btn btn-secondary" style="margin-top: 15px;" onclick="addChannel()">+ 添加通道</button>
+            </div>
+
+            <!-- 关系 -->
+            <div class="section" id="relation">
+                <div class="section-title">对象关系配置</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">关联类型</label>
+                        <select class="form-select" id="relationType">
+                            <option value="parent">父对象 (所属)</option>
+                            <option value="child">子对象 (包含)</option>
+                            <option value="peer">平级对象 (关联)</option>
+                            <option value="custom">自定义关系</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">关联对象</label>
+                        <select class="form-select" id="relationTarget">
+                            <option value="">选择关联对象...</option>
+                            <option value="zone_wt">梧桐分区</option>
+                            <option value="point_001">天元鸣忘北 DN300</option>
+                            <option value="plant_gyq">果园桥水厂</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">关联方式</label>
+                        <select class="form-select" id="relationMethod">
+                            <option value="attribute">属性关联</option>
+                            <option value="intermediate">中间表关联</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">关联属性</label>
+                        <input type="text" class="form-input" placeholder="例如：所属分区 ID" id="relationAttr">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="addRelation()">➕ 添加关系</button>
+
+                <div class="section-title" style="margin-top: 30px;">关系图</div>
+                <div class="relation-diagram">
+                    <div style="display: flex; align-items: center;">
+                        <div class="relation-node">
+                            <div style="font-weight: 600; color: var(--accent-blue);">梧桐分区</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">WT</div>
+                        </div>
+                        <div class="relation-line" data-label="所属"></div>
+                        <div class="relation-node">
+                            <div style="font-weight: 600; color: var(--accent-green);">流量仪表_26020001</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">020303_00004000</div>
+                        </div>
+                        <div class="relation-line" data-label="安装于"></div>
+                        <div class="relation-node">
+                            <div style="font-weight: 600; color: var(--accent-yellow);">天元鸣忘北 DN300</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">监测点</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">已配置关系</div>
+                <table class="table">
+                    <thead>
+                        <tr><th>关联类型</th><th>关联对象</th><th>关联方式</th><th>关联属性</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="relationTable">
+                        <tr><td><span class="badge blue">父对象</span></td><td>梧桐分区</td><td>属性关联</td><td>所属分区 ID</td><td><button class="btn btn-danger" style="padding: 5px 10px;">删除</button></td></tr>
+                        <tr><td><span class="badge green">安装位置</span></td><td>天元鸣忘北 DN300</td><td>属性关联</td><td>安装场所 ID</td><td><button class="btn btn-danger" style="padding: 5px 10px;">删除</button></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 指标 -->
+            <div class="section" id="metric">
+                <div class="section-title">指标配置</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">指标名称</label>
+                        <input type="text" class="form-input" placeholder="例如：日供水量" id="metricName">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">指标编码</label>
+                        <input type="text" class="form-input" placeholder="例如：DAILY_FLOW" id="metricCode">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">指标类型</label>
+                        <select class="form-select" id="metricType">
+                            <option value="calc">计算指标</option>
+                            <option value="stat">统计指标</option>
+                            <option value="alarm">告警指标</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">单位</label>
+                        <input type="text" class="form-input" placeholder="例如：m³" id="metricUnit">
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">计算公式</label>
+                        <textarea class="form-input" rows="4" placeholder="例如：SUM(瞬时流量) WHERE 时间范围 = '今日'" id="metricFormula" style="width: 100%; resize: vertical;"></textarea>
+                    </div>
+                    <div class="form-group full">
+                        <label class="form-label">公式说明</label>
+                        <div style="background: var(--bg-input); padding: 15px; border-radius: 8px; font-size: 13px; color: var(--text-secondary);">
+                            <div style="margin-bottom: 10px;"><strong>可用变量：</strong></div>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <span><span class="badge blue">基础属性</span> 对象名称、对象编码、对象类型</span>
+                                <span><span class="badge green">远传属性</span> 瞬时流量、累计流量、压力、温度</span>
+                                <span><span class="badge yellow">指标</span> 日供水量、月供水量、平均压力</span>
+                            </div>
+                            <div style="margin-top: 10px;"><strong>可用函数：</strong></div>
+                            <div>SUM(), AVG(), MAX(), MIN(), COUNT(), IF(), THEN(), ELSE()</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveMetric()">💾 保存</button>
+                    <button class="btn btn-secondary" onclick="validateFormula()">✓ 验证公式</button>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">已配置指标</div>
+                <table class="table">
+                    <thead>
+                        <tr><th>指标名称</th><th>指标编码</th><th>类型</th><th>单位</th><th>计算公式</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="metricTable">
+                        <tr><td>日供水量</td><td><span class="badge blue">DAILY_FLOW</span></td><td>统计指标</td><td>m³</td><td>SUM(瞬时流量) WHERE 时间 = 今日</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                        <tr><td>月供水量</td><td><span class="badge blue">MONTHLY_FLOW</span></td><td>统计指标</td><td>m³</td><td>SUM(日供水量) WHERE 时间 = 本月</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                        <tr><td>平均压力</td><td><span class="badge green">AVG_PRESSURE</span></td><td>计算指标</td><td>MPa</td><td>AVG(压力) WHERE 时间 = 今日</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                        <tr><td>压力告警</td><td><span class="badge yellow">PRESSURE_ALARM</span></td><td>告警指标</td><td>-</td><td>IF(压力 < 0.20 OR 压力 > 0.50) THEN 告警</td><td><button class="btn btn-secondary" style="padding: 5px 10px;">编辑</button></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        桐乡市水务集团 | 对象管理系统 | 独立页面
+    </div>
+
+    <script>
+        // 主题切换
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            document.querySelector('.theme-toggle').textContent = newTheme === 'dark' ? '🌙' : '☀️';
+            localStorage.setItem('theme', newTheme);
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        // Tab 切换
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 对象列表
+        const objects = [
+            { id: 1, name: '流量仪表_26020001', code: '020303_00004000', type: '流量仪表', zone: '梧桐' },
+            { id: 2, name: '流量仪表_26020002', code: '020303_00004001', type: '流量仪表', zone: '梧桐' },
+            { id: 3, name: '压力仪表_26024684', code: '020302_00000400', type: '压力仪表', zone: '崇福' },
+            { id: 4, name: '水质分析仪_26024986', code: '999999_00000001', type: '水质分析仪', zone: '千岛湖' },
+            { id: 5, name: '水泵_26024989', code: '999999_00000005', type: '水泵', zone: '果园桥' }
+        ];
+
+        function renderObjectList() {
+            const list = document.getElementById('objectList');
+            list.innerHTML = objects.map((obj, index) => `
+                <div class="object-item ${index === 0 ? 'active' : ''}" onclick="selectObject(${obj.id})">
+                    <div class="object-name">${obj.name}</div>
+                    <div class="object-type">${obj.type} · ${obj.zone}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectObject(id) {
+            document.querySelectorAll('.object-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            // 加载对象数据
+            const obj = objects.find(o => o.id === id);
+            document.getElementById('objName').value = obj.name;
+            document.getElementById('objCode').value = obj.code;
+        }
+
+        function addNewObject() {
+            alert('新增对象功能');
+        }
+
+        function saveBasic() {
+            alert('基础属性已保存！');
+        }
+
+        function saveRemote() {
+            alert('远传属性已保存！');
+        }
+
+        function testConnection() {
+            alert('连接测试成功！响应时间：45ms');
+        }
+
+        function addChannel() {
+            alert('添加通道功能');
+        }
+
+        function addRelation() {
+            alert('关系已添加！');
+        }
+
+        function saveMetric() {
+            alert('指标已保存！');
+        }
+
+        function validateFormula() {
+            alert('公式验证通过！');
+        }
+
+        function resetForm() {
+            document.querySelectorAll('.form-input').forEach(input => input.value = '');
+        }
+
+        // 初始化
+        renderObjectList();
+    </script>
+</body>
+</html>
