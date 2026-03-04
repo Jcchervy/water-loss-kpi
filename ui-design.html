@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资产概览 - 资产管理系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #1890ff;
+            --primary-dark: #096dd9;
+            --success: #52c41a;
+            --warning: #faad14;
+            --danger: #ff4d4f;
+            --text-primary: #262626;
+            --text-secondary: #8c8c8c;
+            --border: #e8e8e8;
+            --bg-light: #fafafa;
+            --bg-white: #ffffff;
+            --sidebar-width: 220px;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #001529 0%, #002140 100%);
+            padding-top: 20px;
+            z-index: 100;
+        }
+        
+        .logo {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, #40a9ff 100%);
+            border-radius: 8px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            padding: 12px 24px;
+            color: rgba(255,255,255,0.65);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .nav-item:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.08);
+        }
+        
+        .nav-item.active {
+            color: #fff;
+            background: var(--primary);
+        }
+        
+        .nav-icon {
+            width: 20px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        /* 主内容区 */
+        .main {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+        }
+        
+        /* 顶部栏 */
+        .header {
+            background: var(--bg-white);
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--bg-light);
+            border-radius: 4px;
+            padding: 8px 12px;
+            width: 300px;
+        }
+        
+        .search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        .search-box input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .search-icon {
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .notification {
+            position: relative;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, #40a9ff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        
+        .user-name {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        
+        /* 内容区域 */
+        .content {
+            padding: 24px;
+        }
+        
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-icon.blue { background: rgba(24,144,255,0.1); color: var(--primary); }
+        .stat-icon.green { background: rgba(82,196,26,0.1); color: var(--success); }
+        .stat-icon.orange { background: rgba(250,173,20,0.1); color: var(--warning); }
+        .stat-icon.red { background: rgba(255,77,79,0.1); color: var(--danger); }
+        
+        .stat-trend {
+            font-size: 12px;
+            color: var(--success);
+        }
+        
+        .stat-trend.down { color: var(--danger); }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        /* 图表区域 */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .chart-card {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        
+        .chart-container {
+            height: 300px;
+        }
+        
+        /* 表格 */
+        .table-card {
+            background: var(--bg-white);
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            padding: 6px 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-white);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        
+        th {
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        tr:hover {
+            background: rgba(24,144,255,0.02);
+        }
+        
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status-tag.online {
+            background: rgba(82,196,26,0.1);
+            color: var(--success);
+        }
+        
+        .status-tag.offline {
+            background: rgba(255,77,79,0.1);
+            color: var(--danger);
+        }
+        
+        .status-tag.warning {
+            background: rgba(250,173,20,0.1);
+            color: var(--warning);
+        }
+        
+        .action-btn {
+            color: var(--primary);
+            cursor: pointer;
+            margin-right: 12px;
+        }
+        
+        .action-btn:hover {
+            color: var(--primary-dark);
+        }
+        
+        .action-btn.delete {
+            color: var(--danger);
+        }
+        
+        /* 分页 */
+        .pagination {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .page-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-right: 16px;
+        }
+        
+        .page-btn {
+            padding: 4px 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-white);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .page-btn:hover, .page-btn.active {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .page-btn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">📊</div>
+            <span>资产管理系统</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span>首页</span>
+            </li>
+            <li class="nav-item active">
+                <span class="nav-icon">📦</span>
+                <span>资产管理</span>
+            </li>
+            <li class="nav-item">
+                <span class="nav-icon">📥</span>
+                <span>数据采集</span>
+            </li>
+            <li class="nav-item">
+                <span class="nav-icon">📈</span>
+                <span>数据分析</span>
+            </li>
+            <li class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span>系统设置</span>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 主内容 -->
+    <div class="main">
+        <!-- 顶部栏 -->
+        <div class="header">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="搜索资产名称、编号...">
+            </div>
+            <div class="header-right">
+                <div class="notification">
+                    🔔
+                    <span class="notification-badge">5</span>
+                </div>
+                <div class="user-info">
+                    <div class="avatar">江</div>
+                    <span class="user-name">江诚</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 内容区 -->
+        <div class="content">
+            <h1 class="page-title">资产概览</h1>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon blue">📊</div>
+                        <span class="stat-trend">↑ 12%</span>
+                    </div>
+                    <div class="stat-value">2,686</div>
+                    <div class="stat-label">总资产数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon green">✓</div>
+                        <span class="stat-trend">↑ 5%</span>
+                    </div>
+                    <div class="stat-value">2,412</div>
+                    <div class="stat-label">在线设备</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon orange">⚠</div>
+                        <span class="stat-trend down">↓ 8%</span>
+                    </div>
+                    <div class="stat-value">198</div>
+                    <div class="stat-label">离线设备</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon red">🔔</div>
+                        <span class="stat-trend down">↓ 3%</span>
+                    </div>
+                    <div class="stat-value">76</div>
+                    <div class="stat-label">告警设备</div>
+                </div>
+            </div>
+            
+            <!-- 图表区域 -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-title">资产类型分布</div>
+                    <div class="chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">资产状态分布</div>
+                    <div class="chart-container">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 表格 -->
+            <div class="table-card">
+                <div class="table-header">
+                    <div class="table-title">资产列表</div>
+                    <div class="table-actions">
+                        <button class="btn">导出</button>
+                        <button class="btn btn-primary">+ 新增资产</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>资产编号</th>
+                            <th>资产名称</th>
+                            <th>资产类型</th>
+                            <th>所属分区</th>
+                            <th>状态</th>
+                            <th>更新时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>DEV-20240001</td>
+                            <td>流量仪表_梧桐A区</td>
+                            <td>流量仪表</td>
+                            <td>梧桐</td>
+                            <td><span class="status-tag online">在线</span></td>
+                            <td>2026-03-04 18:30:22</td>
+                            <td>
+                                <span class="action-btn">编辑</span>
+                                <span class="action-btn delete">删除</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>DEV-20240002</td>
+                            <td>压力仪表_濮院B区</td>
+                            <td>压力仪表</td>
+                            <td>濮院</td>
+                            <td><span class="status-tag online">在线</span></td>
+                            <td>2026-03-04 18:28:15</td>
+                            <td>
+                                <span class="action-btn">编辑</span>
+                                <span class="action-btn delete">删除</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>DEV-20240003</td>
+                            <td>水质分析仪_运河水厂</td>
+                            <td>水质分析仪</td>
+                            <td>供水</td>
+                            <td><span class="status-tag warning">告警</span></td>
+                            <td>2026-03-04 18:25:08</td>
+                            <td>
+                                <span class="action-btn">编辑</span>
+                                <span class="action-btn delete">删除</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>DEV-20240004</td>
+                            <td>水泵_果园桥取水口</td>
+                            <td>水泵</td>
+                            <td>供水</td>
+                            <td><span class="status-tag offline">离线</span></td>
+                            <td>2026-03-04 16:45:33</td>
+                            <td>
+                                <span class="action-btn">编辑</span>
+                                <span class="action-btn delete">删除</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>DEV-20240005</td>
+                            <td>流量仪表_乌镇C区</td>
+                            <td>流量仪表</td>
+                            <td>乌镇</td>
+                            <td><span class="status-tag online">在线</span></td>
+                            <td>2026-03-04 18:20:45</td>
+                            <td>
+                                <span class="action-btn">编辑</span>
+                                <span class="action-btn delete">删除</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    <span class="page-info">共 2,686 条</span>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                    <button class="page-btn">...</button>
+                    <button class="page-btn">269</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 饼图
+        new Chart(document.getElementById('pieChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['流量仪表', '压力仪表', '水质分析仪', '水泵'],
+                datasets: [{
+                    data: [2330, 308, 8, 40],
+                    backgroundColor: ['#1890ff', '#52c41a', '#faad14', '#ff4d4f'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 柱状图
+        new Chart(document.getElementById('barChart'), {
+            type: 'bar',
+            data: {
+                labels: ['梧桐', '濮院', '凤鸣', '石门', '乌镇', '崇福', '大麻', '河山'],
+                datasets: [
+                    {
+                        label: '在线',
+                        data: [440, 400, 270, 230, 370, 300, 170, 155],
+                        backgroundColor: '#52c41a',
+                        borderRadius: 4
+                    },
+                    {
+                        label: '离线',
+                        data: [30, 28, 22, 18, 25, 20, 15, 12],
+                        backgroundColor: '#faad14',
+                        borderRadius: 4
+                    },
+                    {
+                        label: '告警',
+                        data: [15, 14, 10, 8, 12, 6, 5, 3],
+                        backgroundColor: '#ff4d4f',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
