@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供水漏损控制 KPI Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 40px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            color: #a0a0a0;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .dashboard {
+            padding: 30px 40px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        
+        .kpi-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,212,255,0.2);
+        }
+        
+        .kpi-card.wide {
+            grid-column: span 2;
+        }
+        
+        .kpi-card.tall {
+            grid-column: span 4;
+        }
+        
+        .kpi-title {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .kpi-value {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .kpi-value.good { color: #00ff88; }
+        .kpi-value.warning { color: #ffaa00; }
+        .kpi-value.danger { color: #ff4757; }
+        
+        .kpi-unit {
+            font-size: 16px;
+            color: #a0a0a0;
+        }
+        
+        .kpi-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        .kpi-trend.up { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .kpi-trend.down { background: rgba(255,71,87,0.2); color: #ff4757; }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-top: 15px;
+        }
+        
+        .dma-list {
+            margin-top: 15px;
+        }
+        
+        .dma-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .dma-item:last-child {
+            border-bottom: none;
+        }
+        
+        .dma-name {
+            font-weight: 500;
+        }
+        
+        .dma-value {
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        
+        .dma-value.good { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .dma-value.warning { background: rgba(255,170,0,0.2); color: #ffaa00; }
+        .dma-value.danger { background: rgba(255,71,87,0.2); color: #ff4757; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-fill.good { background: linear-gradient(90deg, #00ff88, #00d4ff); }
+        .progress-fill.warning { background: linear-gradient(90deg, #ffaa00, #ff8800); }
+        .progress-fill.danger { background: linear-gradient(90deg, #ff4757, #ff0000); }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-badge.normal { background: rgba(0,255,136,0.2); color: #00ff88; }
+        .status-badge.alert { background: rgba(255,170,0,0.2); color: #ffaa00; }
+        .status-badge.critical { background: rgba(255,71,87,0.2); color: #ff4757; }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 30px;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            color: #1a1a2e;
+            box-shadow: 0 5px 30px rgba(0,212,255,0.4);
+            transition: transform 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💧 供水漏损控制 KPI Dashboard</h1>
+        <p>实时监控 · DMA 分区计量 · 漏损分析</p>
+    </div>
+    
+    <div class="dashboard">
+        <!-- 核心 KPI 卡片 -->
+        <div class="kpi-card">
+            <div class="kpi-title">综合漏损率</div>
+            <div class="kpi-value good">12.5<span class="kpi-unit">%</span></div>
+            <div class="kpi-trend up">↓ 较上月 1.2%</div>
+            <div class="progress-bar">
+                <div class="progress-fill good" style="width: 87.5%"></div>
+            </div>
+        </div>
+        
+        <div class="kpi-card">
+            <div class="kpi-title">日供水量</div>
+            <div class="kpi-value">45,280<span class="kpi-unit">m³</span></div>
+            <div class="kpi-trend up">↑ 较昨日 3.5%</div>
+            <div class="progress-bar">
+                <div class="progress-fill good" style="width: 75%"></div>
+            </div>
+        </div>
+        
+        <div class="kpi-card">
+            <div class="kpi-title">漏损水量</div>
+            <div class="kpi-value warning">5,660<span class="kpi-unit">m³/日</span></div>
+            <div class="kpi-trend down">↓ 较上月 8.2%</div>
+            <div class="progress-bar">
+                <div class="progress-fill warning" style="width: 60%"></div>
+            </div>
+        </div>
+        
+        <div class="kpi-card">
+            <div class="kpi-title">压力合格率</div>
+            <div class="kpi-value good">98.2<span class="kpi-unit">%</span></div>
+            <div class="kpi-trend up">↑ 较上月 0.5%</div>
+            <div class="progress-bar">
+                <div class="progress-fill good" style="width: 98.2%"></div>
+            </div>
+        </div>
+        
+        <!-- DMA 分区排名 -->
+        <div class="kpi-card wide">
+            <div class="kpi-title">🏆 DMA 分区漏损率排名</div>
+            <div class="dma-list">
+                <div class="dma-item">
+                    <span class="dma-name">DMA-01 中心城区</span>
+                    <span class="dma-value good">8.3%</span>
+                </div>
+                <div class="dma-item">
+                    <span class="dma-name">DMA-02 工业园区</span>
+                    <span class="dma-value good">9.7%</span>
+                </div>
+                <div class="dma-item">
+                    <span class="dma-name">DMA-03  residential 区</span>
+                    <span class="dma-value warning">14.2%</span>
+                </div>
+                <div class="dma-item">
+                    <span class="dma-name">DMA-04 老城区</span>
+                    <span class="dma-value danger">22.5%</span>
+                </div>
+                <div class="dma-item">
+                    <span class="dma-name">DMA-05 开发区</span>
+                    <span class="dma-value good">7.1%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 漏损趋势图 -->
+        <div class="kpi-card wide">
+            <div class="kpi-title">📈 漏损率趋势 (近 12 个月)</div>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- 水量平衡图 -->
+        <div class="kpi-card">
+            <div class="kpi-title">💧 水量平衡分析</div>
+            <div class="chart-container">
+                <canvas id="waterBalanceChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- 维修工单 -->
+        <div class="kpi-card">
+            <div class="kpi-title">🔧 维修工单状态</div>
+            <div style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>待处理</span>
+                    <span class="status-badge alert">12</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>处理中</span>
+                    <span class="status-badge normal">8</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span>已完成</span>
+                    <span class="status-badge good">156</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>平均响应时间</span>
+                    <span style="color: #00ff88; font-weight: 600;">2.3 小时</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 漏点类型分布 -->
+        <div class="kpi-card tall">
+            <div class="kpi-title">🎯 漏点类型分布</div>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="leakTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="refreshData()">🔄</button>
+    
+    <div class="footer">
+        数据更新时间：2026-03-04 11:42:00 | 系统运行正常
+    </div>
+    
+    <script>
+        // 漏损率趋势图
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月', '1 月', '2 月', '3 月'],
+                datasets: [{
+                    label: '漏损率 (%)',
+                    data: [18.5, 17.2, 16.8, 15.9, 15.2, 14.5, 13.8, 13.2, 12.9, 13.1, 12.7, 12.5],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0,212,255,0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 10,
+                        max: 20,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#a0a0a0' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#a0a0a0' }
+                    }
+                }
+            }
+        });
+        
+        // 水量平衡图
+        const balanceCtx = document.getElementById('waterBalanceChart').getContext('2d');
+        new Chart(balanceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['收费水量', '免费水量', '物理漏损', '商业漏损'],
+                datasets: [{
+                    data: [75, 12.5, 8.5, 4],
+                    backgroundColor: ['#00ff88', '#00d4ff', '#ffaa00', '#ff4757'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#fff', padding: 15 }
+                    }
+                }
+            }
+        });
+        
+        // 漏点类型分布图
+        const leakTypeCtx = document.getElementById('leakTypeChart').getContext('2d');
+        new Chart(leakTypeCtx, {
+            type: 'bar',
+            data: {
+                labels: ['管道接口', '管道本体', '阀门', '消防栓', '水表', '其他'],
+                datasets: [{
+                    label: '漏点数量',
+                    data: [45, 32, 18, 12, 8, 5],
+                    backgroundColor: [
+                        'rgba(0,212,255,0.8)',
+                        'rgba(0,255,136,0.8)',
+                        'rgba(255,170,0,0.8)',
+                        'rgba(255,71,87,0.8)',
+                        'rgba(138,43,226,0.8)',
+                        'rgba(255,255,255,0.8)'
+                    ],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#a0a0a0' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#a0a0a0' }
+                    }
+                }
+            }
+        });
+        
+        function refreshData() {
+            document.querySelector('.refresh-btn').style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                document.querySelector('.refresh-btn').style.transform = 'rotate(0deg)';
+                alert('数据已刷新！');
+            }, 500);
+        }
+    </script>
+</body>
+</html>
