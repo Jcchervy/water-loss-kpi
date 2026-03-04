@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时监测 - 桐乡水务</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f23; --bg-secondary: #1a1a3e; --bg-card: rgba(255,255,255,0.03);
+            --bg-nav: rgba(255,255,255,0.05); --border-color: rgba(255,255,255,0.08);
+            --text-primary: #fff; --text-secondary: #888; --text-muted: #666;
+            --accent-blue: #00d4ff; --accent-green: #00ff88; --accent-yellow: #ffaa00;
+            --accent-red: #ff4757; --accent-purple: #8a2be2;
+        }
+        [data-theme="light"] {
+            --bg-primary: #f5f7fa; --bg-secondary: #ffffff; --bg-card: rgba(255,255,255,0.9);
+            --bg-nav: rgba(255,255,255,0.95); --border-color: rgba(0,0,0,0.08);
+            --text-primary: #1a1a2e; --text-secondary: #666; --text-muted: #999;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+            min-height: 100vh; color: var(--text-primary); transition: all 0.3s ease;
+        }
+        .nav {
+            background: var(--bg-nav); backdrop-filter: blur(10px); padding: 15px 40px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .nav-brand { font-size: 20px; font-weight: 700; color: var(--accent-blue); }
+        .nav-links { display: flex; gap: 15px; align-items: center; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; padding: 8px 16px; border-radius: 20px; transition: all 0.3s; font-size: 14px; }
+        .nav-links a:hover, .nav-links a.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
+        .theme-toggle {
+            padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);
+            background: var(--bg-card); color: var(--text-primary); cursor: pointer;
+            font-size: 18px; transition: all 0.3s;
+        }
+        .theme-toggle:hover { background: rgba(0,212,255,0.15); }
+        .container { padding: 30px 40px; }
+        .header { margin-bottom: 30px; }
+        .header h1 { font-size: 28px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
+        .header p { color: var(--text-secondary); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .tab {
+            padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            color: var(--text-secondary); transition: all 0.3s; font-size: 14px;
+        }
+        .tab:hover { background: rgba(255,255,255,0.05); }
+        .tab.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); border-color: rgba(0,212,255,0.3); }
+        .section { display: none; }
+        .section.active { display: block; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card {
+            background: var(--bg-card); backdrop-filter: blur(10px);
+            border-radius: 14px; padding: 20px; border: 1px solid var(--border-color);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 35px rgba(0,212,255,0.15); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .card-status { width: 10px; height: 10px; border-radius: 50%; }
+        .card-status.online { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+        .card-status.offline { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+        .card-status.warning { background: var(--accent-yellow); box-shadow: 0 0 10px var(--accent-yellow); }
+        .metric { margin-bottom: 12px; }
+        .metric-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+        .metric-value { font-size: 24px; font-weight: 700; color: var(--accent-blue); }
+        .metric-unit { font-size: 14px; color: var(--text-secondary); margin-left: 5px; }
+        .metric-value.green { color: var(--accent-green); }
+        .metric-value.yellow { color: var(--accent-yellow); }
+        .metric-value.red { color: var(--accent-red); }
+        .card-footer { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--text-muted); }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge.blue { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
+        .badge.green { background: rgba(0,255,136,0.15); color: var(--accent-green); }
+        .badge.yellow { background: rgba(255,170,0,0.15); color: var(--accent-yellow); }
+        .badge.purple { background: rgba(138,43,226,0.15); color: var(--accent-purple); }
+        .footer { text-align: center; padding: 25px; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border-color); margin-top: 40px; }
+        .update-time { position: fixed; bottom: 20px; right: 20px; background: rgba(0,212,255,0.15); padding: 8px 15px; border-radius: 20px; font-size: 12px; color: var(--accent-blue); }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <div class="nav-brand">💧 桐乡水务</div>
+        <div class="nav-links">
+            <a href="index.html">总览</a>
+            <a href="realtime.html" class="active">实时监测</a>
+            <a href="alarm.html">实时报警</a>
+            <a href="data-management.html">资产管理</a>
+            <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>📊 实时监测</h1>
+            <p>设备实时数据监控 · 自动刷新</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showSection('flow')">💧 流量仪表</div>
+            <div class="tab" onclick="showSection('pressure')">📊 压力仪表</div>
+            <div class="tab" onclick="showSection('quality')">🧪 水质分析仪</div>
+            <div class="tab" onclick="showSection('pump')">⚙️ 水泵</div>
+        </div>
+
+        <div class="section active" id="flow">
+            <div class="grid" id="flowGrid"></div>
+        </div>
+
+        <div class="section" id="pressure">
+            <div class="grid" id="pressureGrid"></div>
+        </div>
+
+        <div class="section" id="quality">
+            <div class="grid" id="qualityGrid"></div>
+        </div>
+
+        <div class="section" id="pump">
+            <div class="grid" id="pumpGrid"></div>
+        </div>
+    </div>
+
+    <div class="update-time">最后更新：<span id="updateTime">--:--:--</span></div>
+
+    <div class="footer">
+        桐乡市水务集团 | 实时监测信息系统 | 数据自动刷新中
+    </div>
+
+    <script>
+        function generateFlowData(index) {
+            const zones = ['梧桐', '濮院', '凤鸣', '石门', '乌镇', '崇福', '大麻', '河山', '屠甸', '高桥', '同福'];
+            const zone = zones[index % zones.length];
+            const instantFlow = (Math.random() * 50 + 10).toFixed(2);
+            const totalFlow = (Math.random() * 10000 + 50000).toFixed(2);
+            const status = Math.random() > 0.12 ? 'online' : (Math.random() > 0.5 ? 'warning' : 'offline');
+            return { name: `流量仪表_${26020001 + index}`, location: `${zone}${['光明路', '建设路', '人民路', '胜利街'][index % 4]}DN${[200,250,300,400][index % 4]}`, instantFlow, totalFlow, status, zone };
+        }
+
+        function generatePressureData(index) {
+            const zones = ['梧桐', '濮院', '凤鸣', '石门', '乌镇', '崇福', '大麻', '河山', '屠甸', '高桥', '同福'];
+            const zone = zones[index % zones.length];
+            const pressure = (Math.random() * 0.3 + 0.25).toFixed(3);
+            const status = Math.random() > 0.08 ? 'online' : (Math.random() > 0.5 ? 'warning' : 'offline');
+            return { name: `压力仪表_${26024684 + index}`, location: `${zone}${['幸福路', '和平街', '兴旺路'][index % 3]}`, pressure, status, zone };
+        }
+
+        function generateQualityData(index) {
+            const locations = ['千岛湖源水', '西部湿地', '果园桥水厂', '运河水厂', '同福水厂', '果园桥取水口', '运河取水口', '同福取水口'];
+            const chlorine = (Math.random() * 0.5 + 0.3).toFixed(2);
+            const turbidity = (Math.random() * 0.3 + 0.1).toFixed(2);
+            const ph = (Math.random() * 0.5 + 7.0).toFixed(2);
+            const temp = (Math.random() * 5 + 15).toFixed(1);
+            return { name: `水质分析仪_${26024986 + index}`, location: locations[index], chlorine, turbidity, ph, temp, status: 'online' };
+        }
+
+        function generatePumpData(index) {
+            const locations = ['果园桥取水口', '运河取水口', '同福取水口', '果园桥水厂', '运河水厂', '同福水厂'];
+            const location = locations[index % locations.length];
+            const status = Math.random() > 0.05 ? 'running' : 'stopped';
+            const current = status === 'running' ? (Math.random() * 20 + 80).toFixed(1) : 0;
+            const voltage = status === 'running' ? (Math.random() * 10 + 370).toFixed(0) : 0;
+            const frequency = status === 'running' ? (Math.random() * 2 + 48).toFixed(1) : 0;
+            const power = status === 'running' ? (Math.random() * 500 + 3000).toFixed(0) : 0;
+            return { name: `水泵_${26024989 + index}`, location, status: status === 'running' ? 'online' : 'offline', current, voltage, frequency, power };
+        }
+
+        function renderFlowCards() {
+            const grid = document.getElementById('flowGrid');
+            let html = '';
+            for (let i = 0; i < 12; i++) {
+                const data = generateFlowData(i);
+                html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">瞬时流量</div><div class="metric-value">${data.instantFlow}<span class="metric-unit">m³/h</span></div></div><div class="metric"><div class="metric-label">累计流量</div><div class="metric-value">${data.totalFlow}<span class="metric-unit">m³</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderPressureCards() {
+            const grid = document.getElementById('pressureGrid');
+            let html = '';
+            for (let i = 0; i < 12; i++) {
+                const data = generatePressureData(i);
+                html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">压力</div><div class="metric-value ${data.pressure < 0.25 ? 'yellow' : 'green'}">${data.pressure}<span class="metric-unit">MPa</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderQualityCards() {
+            const grid = document.getElementById('qualityGrid');
+            let html = '';
+            for (let i = 0; i < 8; i++) {
+                const data = generateQualityData(i);
+                html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">余氯</div><div class="metric-value green">${data.chlorine}<span class="metric-unit">mg/L</span></div></div><div class="metric"><div class="metric-label">浊度</div><div class="metric-value green">${data.turbidity}<span class="metric-unit">NTU</span></div></div><div class="metric"><div class="metric-label">pH</div><div class="metric-value">${data.ph}</div></div><div class="metric"><div class="metric-label">温度</div><div class="metric-value">${data.temp}<span class="metric-unit">°C</span></div></div><div class="card-footer"><span class="badge purple">${data.location}</span></div></div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderPumpCards() {
+            const grid = document.getElementById('pumpGrid');
+            let html = '';
+            for (let i = 0; i < 12; i++) {
+                const data = generatePumpData(i);
+                html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">状态</div><div class="metric-value ${data.status === 'online' ? 'green' : 'red'}">${data.status === 'online' ? '运行中' : '停止'}</div></div><div class="metric"><div class="metric-label">电流</div><div class="metric-value">${data.current}<span class="metric-unit">A</span></div></div><div class="metric"><div class="metric-label">电压</div><div class="metric-value">${data.voltage}<span class="metric-unit">V</span></div></div><div class="metric"><div class="metric-label">频率</div><div class="metric-value">${data.frequency}<span class="metric-unit">Hz</span></div></div><div class="metric"><div class="metric-label">功率</div><div class="metric-value">${data.power}<span class="metric-unit">W</span></div></div><div class="card-footer"><span class="badge yellow">${data.location}</span></div></div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('updateTime').textContent = now.toLocaleTimeString('zh-CN', { hour12: false });
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            document.querySelector('.theme-toggle').textContent = newTheme === 'dark' ? '🌙' : '☀️';
+            localStorage.setItem('theme', newTheme);
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        renderFlowCards();
+        renderPressureCards();
+        renderQualityCards();
+        renderPumpCards();
+        updateTime();
+
+        setInterval(() => {
+            renderFlowCards();
+            renderPressureCards();
+            renderQualityCards();
+            renderPumpCards();
+            updateTime();
+        }, 5000);
+    </script>
+</body>
+</html>
