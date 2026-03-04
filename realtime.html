@@ -64,6 +64,11 @@
             transition: transform 0.3s, box-shadow 0.3s;
         }
         .card:hover { transform: translateY(-4px); box-shadow: 0 10px 35px rgba(0,212,255,0.15); }
+        .card.offline { border: 2px solid var(--accent-red); background: rgba(255,71,87,0.08); animation: pulse 2s infinite; }
+        .card.warning { border: 2px solid var(--accent-yellow); background: rgba(255,170,0,0.05); }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); } 50% { box-shadow: 0 0 20px 5px rgba(255,71,87,0.2); } }
+        .metric-value.alert { color: var(--accent-red) !important; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
         .card-status { width: 10px; height: 10px; border-radius: 50%; }
@@ -228,20 +233,30 @@
             if (filtered.length === 0) {
                 html = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">暂无匹配的设备</div>';
             } else if (type === 'flow') {
-                filtered.forEach(data => {
-                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">瞬时流量</div><div class="metric-value">${data.instantFlow}<span class="metric-unit">m³/h</span></div></div><div class="metric"><div class="metric-label">累计流量</div><div class="metric-value">${data.totalFlow}<span class="metric-unit">m³</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+                filtered.forEach(d => {
+                    const statusClass = d.status === 'offline' ? 'offline' : d.status === 'warning' ? 'warning' : '';
+                    const instantClass = parseFloat(d.instantFlow) > 45 ? 'alert' : '';
+                    html += `<div class="card ${statusClass}"><div class="card-header"><div class="card-title">${d.name}</div><div class="card-status ${d.status}"></div></div><div class="metric"><div class="metric-label">瞬时流量</div><div class="metric-value ${instantClass}">${d.instantFlow}<span class="metric-unit">m³/h</span></div></div><div class="metric"><div class="metric-label">累计流量</div><div class="metric-value">${d.totalFlow}<span class="metric-unit">m³</span></div></div><div class="card-footer"><span class="badge blue">${d.zone}</span> · ${d.location}</div></div>`;
                 });
             } else if (type === 'pressure') {
-                filtered.forEach(data => {
-                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">压力</div><div class="metric-value ${data.pressure < 0.25 ? 'yellow' : 'green'}">${data.pressure}<span class="metric-unit">MPa</span></div></div><div class="card-footer"><span class="badge blue">${data.zone}</span> · ${data.location}</div></div>`;
+                filtered.forEach(d => {
+                    const statusClass = d.status === 'offline' ? 'offline' : d.status === 'warning' ? 'warning' : '';
+                    const pressureClass = parseFloat(d.pressure) < 0.25 ? 'alert' : 'green';
+                    html += `<div class="card ${statusClass}"><div class="card-header"><div class="card-title">${d.name}</div><div class="card-status ${d.status}"></div></div><div class="metric"><div class="metric-label">压力</div><div class="metric-value ${pressureClass}">${d.pressure}<span class="metric-unit">MPa</span></div></div><div class="card-footer"><span class="badge blue">${d.zone}</span> · ${d.location}</div></div>`;
                 });
             } else if (type === 'quality') {
-                filtered.forEach(data => {
-                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">余氯</div><div class="metric-value green">${data.chlorine}<span class="metric-unit">mg/L</span></div></div><div class="metric"><div class="metric-label">浊度</div><div class="metric-value green">${data.turbidity}<span class="metric-unit">NTU</span></div></div><div class="metric"><div class="metric-label">pH</div><div class="metric-value">${data.ph}</div></div><div class="metric"><div class="metric-label">温度</div><div class="metric-value">${data.temp}<span class="metric-unit">°C</span></div></div><div class="card-footer"><span class="badge purple">${data.location}</span></div></div>`;
+                filtered.forEach(d => {
+                    const chlorineAlert = parseFloat(d.chlorine) > 0.7 || parseFloat(d.chlorine) < 0.3;
+                    const turbidityAlert = parseFloat(d.turbidity) > 0.3;
+                    const phAlert = parseFloat(d.ph) < 7.0 || parseFloat(d.ph) > 8.5;
+                    const hasAlert = chlorineAlert || turbidityAlert || phAlert;
+                    html += `<div class="card ${hasAlert ? 'warning' : ''}"><div class="card-header"><div class="card-title">${d.name}</div><div class="card-status ${d.status}"></div></div><div class="metric"><div class="metric-label">余氯</div><div class="metric-value ${chlorineAlert ? 'alert' : 'green'}">${d.chlorine}<span class="metric-unit">mg/L</span></div></div><div class="metric"><div class="metric-label">浊度</div><div class="metric-value ${turbidityAlert ? 'alert' : 'green'}">${d.turbidity}<span class="metric-unit">NTU</span></div></div><div class="metric"><div class="metric-label">pH</div><div class="metric-value ${phAlert ? 'alert' : ''}">${d.ph}</div></div><div class="metric"><div class="metric-label">温度</div><div class="metric-value">${d.temp}<span class="metric-unit">°C</span></div></div><div class="card-footer"><span class="badge purple">${d.location}</span></div></div>`;
                 });
             } else if (type === 'pump') {
-                filtered.forEach(data => {
-                    html += `<div class="card"><div class="card-header"><div class="card-title">${data.name}</div><div class="card-status ${data.status}"></div></div><div class="metric"><div class="metric-label">状态</div><div class="metric-value ${data.status === 'online' ? 'green' : 'red'}">${data.status === 'online' ? '运行中' : '停止'}</div></div><div class="metric"><div class="metric-label">电流</div><div class="metric-value">${data.current}<span class="metric-unit">A</span></div></div><div class="metric"><div class="metric-label">电压</div><div class="metric-value">${data.voltage}<span class="metric-unit">V</span></div></div><div class="metric"><div class="metric-label">频率</div><div class="metric-value">${data.frequency}<span class="metric-unit">Hz</span></div></div><div class="metric"><div class="metric-label">功率</div><div class="metric-value">${data.power}<span class="metric-unit">W</span></div></div><div class="card-footer"><span class="badge yellow">${data.location}</span></div></div>`;
+                filtered.forEach(d => {
+                    const statusClass = d.status === 'offline' ? 'offline' : '';
+                    const currentAlert = parseFloat(d.current) > 100;
+                    html += `<div class="card ${statusClass}"><div class="card-header"><div class="card-title">${d.name}</div><div class="card-status ${d.status}"></div></div><div class="metric"><div class="metric-label">状态</div><div class="metric-value ${d.status === 'online' ? 'green' : 'red'}">${d.status === 'online' ? '运行中' : '停止'}</div></div><div class="metric"><div class="metric-label">电流</div><div class="metric-value ${currentAlert ? 'alert' : ''}">${d.current}<span class="metric-unit">A</span></div></div><div class="metric"><div class="metric-label">电压</div><div class="metric-value">${d.voltage}<span class="metric-unit">V</span></div></div><div class="metric"><div class="metric-label">频率</div><div class="metric-value">${d.frequency}<span class="metric-unit">Hz</span></div></div><div class="metric"><div class="metric-label">功率</div><div class="metric-value">${d.power}<span class="metric-unit">W</span></div></div><div class="card-footer"><span class="badge yellow">${d.location}</span></div></div>`;
                 });
             }
             grid.innerHTML = html;

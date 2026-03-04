@@ -258,7 +258,96 @@
         // 分页配置
         const pageSize = 10;
         const currentPage = { products: 1, zones: 1, places: 1, devices: 1 };
-        const totalItems = { products: 7, zones: 11, places: 2371, devices: 2686 };
+        const zones = ['梧桐', '濮院', '凤鸣', '石门', '乌镇', '崇福', '大麻', '河山', '屠甸', '高桥', '同福'];
+        const placeTypes = ['供水管网监测点', '取水泵站', '制水厂', '水源地'];
+        const deviceTypes = ['流量仪表', '压力仪表', '水质分析仪', '水泵'];
+        const products = ['迪元 YYD', '申舒斯 WPD', '科隆 IFC300W', '和达电流型压力变送器', '水质分析仪', '格兰富 LS 系列'];
+
+        // 生成模拟数据
+        function generatePlaces() {
+            const places = [
+                { name: '千岛湖源水', code: '33301', type: '水源地', zone: '供水', coord: '119.01,29.55' },
+                { name: '西部湿地', code: '33300', type: '水源地', zone: '供水', coord: '120.33,30.54' },
+                { name: '果园桥取水口', code: '33401', type: '取水泵站', zone: '供水', coord: '120.55,30.60' },
+                { name: '运河取水口', code: '33402', type: '取水泵站', zone: '供水', coord: '120.50,30.65' },
+                { name: '同福取水口', code: '33403', type: '取水泵站', zone: '供水', coord: '120.45,30.55' },
+                { name: '果园桥水厂', code: '33501', type: '制水厂', zone: '供水', coord: '120.54,30.65' },
+                { name: '运河水厂', code: '33502', type: '制水厂', zone: '供水', coord: '120.52,30.65' },
+                { name: '同福水厂', code: '33503', type: '制水厂', zone: '供水', coord: '120.45,30.58' }
+            ];
+            const streets = ['光明路', '建设路', '人民路', '胜利街', '幸福路', '和平街', '兴旺路', '迎宾大道', '高新路', '工业大道'];
+            const dnSizes = ['DN100', 'DN150', 'DN200', 'DN250', 'DN300', 'DN400', 'DN500'];
+            let id = 1000;
+            for (let i = 0; i < 2363; i++) {
+                const zone = zones[i % 11];
+                const street = streets[i % streets.length];
+                const dn = dnSizes[i % dnSizes.length];
+                places.push({
+                    name: `${street}${dn}_${10000 + i}`,
+                    code: String(10000 + i),
+                    type: '供水管网监测点',
+                    zone: zone,
+                    coord: `${(120.3 + Math.random() * 0.4).toFixed(2)},${(30.5 + Math.random() * 0.2).toFixed(2)}`
+                });
+            }
+            return places;
+        }
+
+        function generateDevices() {
+            const devices = [];
+            const devicePlaces = ['天元鸣忘北 DN300', '常春街 DN400', '迎宾大道与高新四路交叉口', '崇益村孟元河 DN100', '大麻集镇镇西路望仙桥南', '千岛湖源水', '西部湿地', '果园桥取水口', '运河取水口', '同福取水口', '果园桥水厂', '运河水厂', '同福水厂'];
+            // 流量仪表 2330
+            for (let i = 0; i < 2330; i++) {
+                devices.push({
+                    name: `流量仪表_${26020001 + i}`,
+                    code: `020303_${String(4000 + i).padStart(8, '0')}`,
+                    type: '流量仪表',
+                    product: products[i % 3],
+                    place: `监测点_${10000 + i}`,
+                    status: Math.random() > 0.12 ? '已安装' : '维护中'
+                });
+            }
+            // 压力仪表 308
+            for (let i = 0; i < 308; i++) {
+                devices.push({
+                    name: `压力仪表_${26024684 + i}`,
+                    code: `020302_${String(400 + i).padStart(8, '0')}`,
+                    type: '压力仪表',
+                    product: '和达电流型压力变送器',
+                    place: `监测点_${20000 + i}`,
+                    status: Math.random() > 0.08 ? '已安装' : '维护中'
+                });
+            }
+            // 水质分析仪 8
+            const qualityPlaces = ['千岛湖源水', '西部湿地', '果园桥水厂', '运河水厂', '同福水厂', '果园桥取水口', '运河取水口', '同福取水口'];
+            for (let i = 0; i < 8; i++) {
+                devices.push({
+                    name: `水质分析仪_${26024986 + i}`,
+                    code: `999999_${String(1 + i).padStart(8, '0')}`,
+                    type: '水质分析仪',
+                    product: '水质分析仪（浊度/pH/温度）',
+                    place: qualityPlaces[i],
+                    status: '已安装'
+                });
+            }
+            // 水泵 40
+            const pumpPlaces = ['果园桥取水口', '运河取水口', '同福取水口', '果园桥水厂', '运河水厂', '同福水厂'];
+            for (let i = 0; i < 40; i++) {
+                devices.push({
+                    name: `水泵_${26024989 + i}`,
+                    code: `999999_${String(100 + i).padStart(8, '0')}`,
+                    type: '水泵',
+                    product: '格兰富 LS 系列',
+                    place: pumpPlaces[i % 6],
+                    status: Math.random() > 0.05 ? '已安装' : '维护中'
+                });
+            }
+            return devices;
+        }
+
+        const allPlaces = generatePlaces();
+        const allDevices = generateDevices();
+        const totalItems = { products: 7, zones: 11, places: allPlaces.length, devices: allDevices.length };
 
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -267,14 +356,47 @@
             event.target.classList.add('active');
         }
 
+        // 渲染场所表格
+        function renderPlacesTable() {
+            const page = currentPage.places;
+            const start = (page - 1) * pageSize;
+            const end = Math.min(start + pageSize, allPlaces.length);
+            const tbody = document.querySelector('#places tbody');
+            let html = '';
+            for (let i = start; i < end; i++) {
+                const p = allPlaces[i];
+                const typeClass = p.type === '水源地' ? 'good' : p.type === '取水泵站' ? 'info' : p.type === '制水厂' ? 'warn' : 'purple';
+                html += `<tr><td>${i + 1}</td><td>${p.name}</td><td>${p.code}</td><td><span class="badge ${typeClass}">${p.type}</span></td><td>${p.zone}</td><td>${p.coord}</td><td><span class="badge good">启用</span></td><td><div class="action-btns"><button class="action-btn edit">编辑</button><button class="action-btn delete">删除</button></div></td></tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // 渲染设备表格
+        function renderDevicesTable() {
+            const page = currentPage.devices;
+            const start = (page - 1) * pageSize;
+            const end = Math.min(start + pageSize, allDevices.length);
+            const tbody = document.querySelector('#devices tbody');
+            let html = '';
+            for (let i = start; i < end; i++) {
+                const d = allDevices[i];
+                const typeClass = d.type === '流量仪表' ? 'info' : d.type === '压力仪表' ? 'warn' : d.type === '水质分析仪' ? 'good' : 'purple';
+                const statusClass = d.status === '已安装' ? 'good' : 'bad';
+                html += `<tr><td>${i + 1}</td><td>${d.name}</td><td>${d.code}</td><td><span class="badge ${typeClass}">${d.type}</span></td><td>${d.product}</td><td>${d.place}</td><td><span class="badge ${statusClass}">${d.status}</span></td><td><div class="action-btns"><button class="action-btn edit">编辑</button><button class="action-btn delete">删除</button></div></td></tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
         // 翻页功能
         function goToPage(section, page) {
             const totalPages = Math.ceil(totalItems[section] / pageSize);
             if (page < 1 || page > totalPages) return;
             currentPage[section] = page;
             renderPagination(section);
-            // 这里可以添加实际的数据加载逻辑
-            console.log(`切换到 ${section} 第 ${page} 页`);
+            
+            // 渲染对应表格数据
+            if (section === 'places') renderPlacesTable();
+            else if (section === 'devices') renderDevicesTable();
         }
 
         function renderPagination(section) {
@@ -327,10 +449,10 @@
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.querySelector('.theme-toggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
 
-        // 初始化分页
-        ['products', 'zones', 'places', 'devices'].forEach(section => {
-            renderPagination(section);
-        });
+        // 初始化
+        renderPlacesTable();
+        renderDevicesTable();
+        ['products', 'zones', 'places', 'devices'].forEach(section => renderPagination(section));
     </script>
 </body>
 </html>
