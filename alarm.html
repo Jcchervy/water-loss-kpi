@@ -63,10 +63,10 @@
         .tab.active { background: rgba(0,212,255,0.15); color: var(--accent-blue); border-color: rgba(0,212,255,0.3); }
         .section { display: none; }
         .section.active { display: block; }
-        .alarm-list { display: flex; flex-direction: column; gap: 15px; }
+        .alarm-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .alarm-item {
             background: var(--bg-card); border-radius: 12px; padding: 20px;
-            border-left: 4px solid var(--accent-red); display: flex; gap: 20px; align-items: flex-start;
+            border-top: 4px solid var(--accent-red); display: flex; flex-direction: column; gap: 12px;
         }
         .alarm-item.warning { border-left-color: var(--accent-yellow); }
         .alarm-item.info { border-left-color: var(--accent-blue); }
@@ -80,6 +80,12 @@
         .alarm-badge.major { background: rgba(255,170,0,0.15); color: var(--accent-yellow); }
         .alarm-badge.minor { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
         .footer { text-align: center; padding: 25px; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--border-color); margin-top: 40px; }
+        @media (max-width: 1200px) {
+            .alarm-list { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .alarm-list { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -140,16 +146,16 @@
             const filtered = filter === 'all' ? alarms : alarms.filter(a => a.level === filter);
             list.innerHTML = filtered.map(alarm => `
                 <div class="alarm-item ${alarm.level}">
-                    <div class="alarm-icon">${alarm.icon}</div>
-                    <div class="alarm-content">
-                        <div class="alarm-title">${alarm.title}</div>
-                        <div class="alarm-desc">${alarm.desc}</div>
-                        <div class="alarm-meta">
-                            <span class="alarm-badge ${alarm.level}">${alarm.level === 'critical' ? '严重' : alarm.level === 'major' ? '主要' : '次要'}</span>
-                            <span>📍 ${alarm.location}</span>
-                            <span>⚙️ ${alarm.device}</span>
-                            <span>⏰ ${alarm.time}</span>
-                        </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <div class="alarm-icon" style="font-size: 24px;">${alarm.icon}</div>
+                        <span class="alarm-badge ${alarm.level}">${alarm.level === 'critical' ? '严重' : alarm.level === 'major' ? '主要' : '次要'}</span>
+                    </div>
+                    <div class="alarm-title" style="font-size: 15px; font-weight: 600; color: var(--text-primary);">${alarm.title}</div>
+                    <div class="alarm-desc" style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">${alarm.desc}</div>
+                    <div class="alarm-meta" style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--text-muted);">
+                        <span>📍 ${alarm.location}</span>
+                        <span>⚙️ ${alarm.device}</span>
+                        <span>⏰ ${alarm.time}</span>
                     </div>
                 </div>
             `).join('');
