@@ -19,6 +19,16 @@
             --text-primary: #1a1a2e; --text-secondary: #666; --text-muted: #999;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        select {
+            padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            font-size: 13px; cursor: pointer;
+            background-color: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+        }
+        select option {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
